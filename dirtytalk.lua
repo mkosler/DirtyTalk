@@ -1,5 +1,5 @@
 ---
--- @copyright Michael Kosler 2013
+-- @copyright 2013 Michael Kosler
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 -- and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -87,9 +87,6 @@ setmetatable(Message, { __call = Message.new })
 local MessageDispatcher = {}
 MessageDispatcher.__index = MessageDispatcher
 
---- Constructor
--- Can also use __call metamethod (i.e. MessageDispatcher(...))
--- MessageDispatcher is a singleton, so you will not call this method
 function MessageDispatcher:new()
   return setmetatable({
     _time = 0,

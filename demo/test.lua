@@ -2,7 +2,7 @@
 package.path = "../?.lua;./demo/?.lua;" .. package.path
 
 local DirtyTalk = require 'dirtytalk'
-local Entity = require 'entity'
+local Entity    = require 'entity'
 
 local Michael = Entity("Michael")
 local Doug    = Entity("Doug")

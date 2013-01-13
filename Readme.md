@@ -6,29 +6,27 @@ Based on the messaging system from [Programming Game AI by Example](http://www.a
 
 ### Example
 
-    local DirtyTalk = require 'dirtytalk'
+An example can be found the `demo/` directory.
 
-    -- Simple test Entity class
-    -- Only requirement for your entity class is a handleMessage function:
-    -- i.e. Entity:handleMessage(msg)
-    local Entity = require 'entity'
+### Documentation
 
-    local michael = Entity('Michael', 0, 0, 10, 10)
-    local doug = Entity('Doug', 50, 50, 10, 10)
+DirtyTalk is a singleton, so every time you require the module, you get the same
+instance of it. No need to make a global version.
 
-    -- Dispatch a delayed message
-    DirtyTalk:dispatch(3.0, michael, doug, "TALK")
+#### DirtyTalk:dispatch(delay, message, receiver, extra)
 
-    -- Dispatch an immediate message
-    DirtyTalk:dispatch(0, michael, doug, "STAY")
+Creates messages to be send to other entities. Messages with a delay of 0 will
+be sent immediately. *NOTE:* If you need to have a response to this message,
+you can use the extra parameter.
 
-    -- Dispatch an immediate message with additional information
-    DirtyTalk:dispatch(0, doug, michael, "MOVE", { left = 5, up = 10 })
+- *delay*: Time until message should be sent
+- *message*: Type of message sent
+- *receiver*: Whom should receive this message
+- *extra*: Additional information **OPTIONAL**
 
-    -- Simulated game loop
-    -- Message will be displayed after 3.0 seconds
-    local time = 0.0
-    while time < 5.0 do
-      DirtyTalk:dispatchDelayedMessages(0.5)
-      time = time + 0.5
-    end
+#### DirtyTalk:dispatchDelayedMessages(dt)
+
+Checks delayed messages and dispatches them after their delay has passed.
+Call this once per frame.
+
+- *dt*: Time between frames
