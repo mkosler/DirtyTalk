@@ -16,45 +16,69 @@
 -- WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 -- SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+-----------------------------------------------------------------
+--- PriorityQueue class
+-- Required to implement the MessageDispatcher
 
+local PriorityQueue = {}
+PriorityQueue.__index = PriorityQueue
 
+function PriorityQueue:new()
+  return setmetatable({
+    _items = {}
+  }, self)
+end
+
+function PriorityQueue:push(o)
+  for i,v in ipairs(self._items) do
+    if o > v then
+      table.insert(self._items, i, o)
+      return
+    end
+  end
+
+  table.insert(self._items, o)
+end
+
+function PriorityQueue:top()
+  return self._items[#self._items]
+end
+
+function PriorityQueue:empty()
+  return #self._items == 0
+end
+
+function PriorityQueue:pop()
+  return table.remove(self._items)
+end
+
+setmetatable(PriorityQueue, { __call = PriorityQueue.new })
 
 -----------------------------------------------------------------
 --- Message class
--- Used to pass information between entities
--- DO NOT instantiate this directly,
--- MessageDispatcher will do this for you
-
 local Message = {}
 Message.__index = Message
 
---- Constructor
--- Can also use __call metamethods (i.e. Message(...))
--- @param delay Amount of time to delay the sending of the message, if 0 then send immediately
--- @param senderID Sending entity reference
--- @param receiverID Receiving entity reference
--- @param message Message type
--- @param extraInfo Table of extra information that may be required
-function Message:new(delay, senderID, receiverID, message, extraInfo)
+function Message:new(dispatchTime, message, receiver, extra)
   return setmetatable({
-    Delay = delay,
-    SenderID = senderID,
-    ReceiverID = receiverID,
-    Message = message,
-    ExtraInfo = extraInfo
+    message = message,
+    dispatchTime = dispatchTime,
+    receiver = receiver,
+    extra = extra
   }, self)
 end
 
 function Message:__tostring()
   return string.format(
-    'Message [%s] : { Delay = %f, Sender = %s, Receiver = %s }',
-    self.Message, self.Delay, self.SenderDI, self.ReceiverID)
+    'Message [%s] { Delay = %f, Receiver = %s }',
+    self.message, self.dispatchTime, self.receiver)
 end
 
-setmetatable(Message, {
-  __call = Message.new,
-  __newindex = function () error('Cannot add new field to Message') end
-})
+function Message:__lt(o)
+  return self.dispatchTime < o.dispatchTime
+end
+
+setmetatable(Message, { __call = Message.new })
 
 -----------------------------------------------------------------
 --- MessageDispatcher class
@@ -69,25 +93,25 @@ MessageDispatcher.__index = MessageDispatcher
 function MessageDispatcher:new()
   return setmetatable({
     _time = 0,
-    _queue = {}
+    _queue = PriorityQueue()
   }, self)
 end
 
 --- Creates and dispatches the message to the receiving entity
--- @param delay Amount of time to delay the sending of the message, if 0 then send immediately
--- @param senderID Sending entity reference
--- @param receiverID Receiving entity reference
--- @param message Message type
--- @param extraInfo Table of extra information that may be required
-function MessageDispatcher:dispatch(delay, senderID, receiverID, message, extraInfo)
-  local msg = Message(0, sender, receiver, message, extraInfo)
+-- Handles both immediate messages and delayed messages
+-- NOTE: If you need to respond to the sent message, place the sender in the extra slot
+-- @param delay Time until message should be sent
+-- @param message Type of message sent
+-- @param receiver Receiver of the message
+-- @param extra Extra information (single or table)
+function MessageDispatcher:dispatch(delay, message, receiver, extra)
+  local msg = Message(0, message, receiver, extra)
 
   if delay <= 0.0 then
     self:_discharge(msg)
   else
-    msg.Delay = self._time + delay
-
-    self._queue[#self._queue + 1] = msg
+    msg.dispatchTime = self._time + delay
+    self._queue:push(msg)
   end
 end
 
@@ -97,15 +121,14 @@ end
 function MessageDispatcher:dispatchDelayedMessages(dt)
   self._time = self._time + dt
 
-  while #self._queue > 0 and
-        (0 < self._queue[#self._queue].Delay) and
-        (self._queue[#self._queue].Delay < self._time) do
-    self:_discharge(table.remove(self._queue))
+  while not self._queue:empty() and
+        self._queue:top().dispatchTime < self._time do
+    self:_discharge(self._queue:pop())
   end
 end
 
 function MessageDispatcher:_discharge(msg)
-  --msg.Receiver:handleMessage(msg)
+  msg.receiver:handleMessage(msg)
 end
 
 setmetatable(MessageDispatcher, { 
